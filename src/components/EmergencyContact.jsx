@@ -1,140 +1,202 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../services/supabaseClient";
 
-const EmergencyContact = () => {
-  const currentUserEmail = "Miloabara@gmail.com";
+const USER_EMAIL = "Miloabara@gmail.com";
 
+const styles = {
+  card: {
+    backgroundColor: "#1e293b",
+    borderRadius: "16px",
+    padding: "24px 28px",
+    width: "100%",
+    maxWidth: "420px",
+    boxSizing: "border-box",
+    display: "flex",
+    flexDirection: "column",
+    gap: "14px",
+  },
+  heading: {
+    margin: 0,
+    fontSize: "1rem",
+    fontWeight: "600",
+    color: "#e2e8f0",
+    letterSpacing: "0.3px",
+  },
+  subtext: {
+    margin: 0,
+    fontSize: "0.8rem",
+    color: "#64748b",
+  },
+  input: {
+    padding: "10px 14px",
+    borderRadius: "8px",
+    border: "1.5px solid #334155",
+    backgroundColor: "#0f172a",
+    color: "#e2e8f0",
+    fontSize: "0.9rem",
+    outline: "none",
+    width: "100%",
+    boxSizing: "border-box",
+    transition: "border-color 0.2s",
+  },
+  row: {
+    display: "flex",
+    gap: "10px",
+    alignItems: "center",
+  },
+  saveButton: (disabled) => ({
+    padding: "10px 20px",
+    borderRadius: "8px",
+    border: "none",
+    backgroundColor: disabled ? "#334155" : "#3b82f6",
+    color: disabled ? "#64748b" : "#ffffff",
+    fontWeight: "600",
+    fontSize: "0.9rem",
+    cursor: disabled ? "not-allowed" : "pointer",
+    transition: "background-color 0.2s",
+    whiteSpace: "nowrap",
+  }),
+  successText: {
+    color: "#22c55e",
+    fontSize: "0.82rem",
+    margin: 0,
+  },
+  errorText: {
+    color: "#ef4444",
+    fontSize: "0.82rem",
+    margin: 0,
+  },
+  loadingText: {
+    color: "#94a3b8",
+    fontSize: "0.82rem",
+    margin: 0,
+  },
+};
+
+export default function EmergencyContact() {
   const [contactEmail, setContactEmail] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(true);
-  const [message, setMessage] = useState("");
+  const [inputValue, setInputValue] = useState("");
+  const [fetchStatus, setFetchStatus] = useState("loading"); // loading | loaded | error
+  const [saveStatus, setSaveStatus] = useState("idle"); // idle | saving | success | error
+  const [saveMessage, setSaveMessage] = useState("");
 
   useEffect(() => {
-    const fetchEmergencyContact = async () => {
-      setFetching(true);
-      setMessage("");
+    const fetchContact = async () => {
+      setFetchStatus("loading");
 
       const { data, error } = await supabase
         .from("kodo_members")
         .select("emergency_contact_email")
-        .eq("email", currentUserEmail)
+        .eq("email", USER_EMAIL)
         .single();
 
-      if (error) {
-        console.error("Error fetching emergency contact:", error);
-        setMessage("Failed to load emergency contact.");
-      } else if (data && data.emergency_contact_email) {
-        setContactEmail(data.emergency_contact_email);
+      if (error || !data) {
+        setFetchStatus("error");
+        return;
       }
 
-      setFetching(false);
+      const existing = data.emergency_contact_email || "";
+      setContactEmail(existing);
+      setInputValue(existing);
+      setFetchStatus("loaded");
     };
 
-    fetchEmergencyContact();
+    fetchContact();
   }, []);
 
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
   const handleSave = async () => {
-    if (!contactEmail) {
-      setMessage("Please enter an email.");
+    if (!isValidEmail(inputValue)) {
+      setSaveStatus("error");
+      setSaveMessage("Please enter a valid email address.");
       return;
     }
 
-    setLoading(true);
-    setMessage("");
+    setSaveStatus("saving");
+    setSaveMessage("");
 
     const { error } = await supabase
       .from("kodo_members")
-      .update({ emergency_contact_email: contactEmail })
-      .eq("email", currentUserEmail);
+      .update({ emergency_contact_email: inputValue.trim() })
+      .eq("email", USER_EMAIL);
 
     if (error) {
-      console.error("Error saving emergency contact:", error);
-      setMessage("Failed to save contact. Please try again.");
-    } else {
-      setMessage("Emergency contact saved successfully.");
+      setSaveStatus("error");
+      setSaveMessage("Could not save. Please try again.");
+      return;
     }
 
-    setLoading(false);
+    setContactEmail(inputValue.trim());
+    setSaveStatus("success");
+    setSaveMessage("Emergency contact saved successfully.");
+
+    setTimeout(() => {
+      setSaveStatus("idle");
+      setSaveMessage("");
+    }, 4000);
   };
 
+  const isSaving = saveStatus === "saving";
+  const isUnchanged = inputValue.trim() === contactEmail;
+  const saveDisabled = isSaving || isUnchanged || !inputValue.trim();
+
   return (
-    <div
-      style={{
-        maxWidth: "420px",
-        margin: "40px auto",
-        padding: "24px",
-        border: "1px solid #ddd",
-        borderRadius: "8px",
-        fontFamily: "Arial, sans-serif",
-        backgroundColor: "#fff",
-      }}
-    >
-      <h2 style={{ marginBottom: "20px", textAlign: "center" }}>
-        Emergency Contact
-      </h2>
+    <div style={styles.card}>
+      <div>
+        <p style={styles.heading}>🚨 Emergency Contact</p>
+        <p style={styles.subtext}>
+          If you miss a check-in, this person will be notified automatically.
+        </p>
+      </div>
 
-      {fetching ? (
-        <p style={{ textAlign: "center" }}>Loading...</p>
-      ) : (
+      {fetchStatus === "loading" && (
+        <p style={styles.loadingText}>Fetching contact details…</p>
+      )}
+
+      {fetchStatus === "error" && (
+        <p style={styles.errorText}>
+          ⚠ Could not load contact. Check your connection.
+        </p>
+      )}
+
+      {fetchStatus === "loaded" && (
         <>
-          <label
-            style={{
-              display: "block",
-              marginBottom: "8px",
-              fontSize: "14px",
-              fontWeight: "bold",
-            }}
-          >
-            Emergency Contact Email
-          </label>
-
-          <input
-            type="email"
-            value={contactEmail}
-            onChange={(e) => setContactEmail(e.target.value)}
-            placeholder="xwillixmx@gmail.com"
-            style={{
-              width: "100%",
-              padding: "10px",
-              marginBottom: "16px",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
-              fontSize: "14px",
-            }}
-          />
-
-          <button
-            onClick={handleSave}
-            disabled={loading}
-            style={{
-              width: "100%",
-              padding: "12px",
-              backgroundColor: "#007BFF",
-              color: "#fff",
-              border: "none",
-              borderRadius: "4px",
-              fontSize: "14px",
-              cursor: loading ? "not-allowed" : "pointer",
-            }}
-          >
-            {loading ? "Saving..." : "Save"}
-          </button>
-
-          {message && (
-            <p
-              style={{
-                marginTop: "12px",
-                fontSize: "14px",
-                textAlign: "center",
+          <div style={styles.row}>
+            <input
+              style={styles.input}
+              type="email"
+              value={inputValue}
+              onChange={(e) => {
+                setInputValue(e.target.value);
+                if (saveStatus !== "idle") setSaveStatus("idle");
               }}
+              placeholder="e.g. trusted.friend@email.com"
+              aria-label="Emergency contact email address"
+              disabled={isSaving}
+            />
+            <button
+              style={styles.saveButton(saveDisabled)}
+              onClick={handleSave}
+              disabled={saveDisabled}
+              aria-label="Save emergency contact"
             >
-              {message}
+              {isSaving ? "Saving…" : "Save"}
+            </button>
+          </div>
+
+          {saveStatus === "success" && (
+            <p style={styles.successText} role="status">
+              ✓ {saveMessage}
+            </p>
+          )}
+          {saveStatus === "error" && (
+            <p style={styles.errorText} role="alert">
+              ⚠ {saveMessage}
             </p>
           )}
         </>
       )}
     </div>
   );
-};
-
-export default EmergencyContact;
+}
