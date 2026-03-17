@@ -1,117 +1,114 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../services/supabaseClient";
+import { useAuth } from "../context/AuthContext";
+import { colours } from "../theme";
 
-const USER_EMAIL = "Miloabara@gmail.com";
-const WINDOW_HOURS = 72;
-const WINDOW_MS = WINDOW_HOURS * 60 * 60 * 1000;
-
-const styles = {
+const s = {
   card: {
-    backgroundColor: "#1e293b",
+    backgroundcolour: colours.surface,
     borderRadius: "16px",
+    border: `1px solid ${colours.border}`,
     padding: "24px 28px",
     width: "100%",
-    maxWidth: "420px",
+    maxWidth: "480px",
     boxSizing: "border-box",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: "8px",
+    gap: "10px",
     textAlign: "center",
   },
   label: {
     margin: 0,
-    fontSize: "0.78rem",
-    fontWeight: "600",
+    fontSize: "0.72rem",
+    fontWeight: "700",
     textTransform: "uppercase",
-    letterSpacing: "1.5px",
-    color: "#64748b",
+    letterSpacing: "1.8px",
+    colour: colours.textMuted,
   },
-  timerDisplay: (isExpired) => ({
+  timerDisplay: (colour) => ({
     margin: 0,
-    fontSize: "2.2rem",
+    fontSize: "2.6rem",
     fontWeight: "700",
     fontVariantNumeric: "tabular-nums",
-    color: isExpired ? "#ef4444" : "#38bdf8",
+    colour,
     lineHeight: 1.2,
+    letterSpacing: "-1px",
   }),
-  subtext: (isExpired) => ({
+  subtext: (colour) => ({
     margin: 0,
-    fontSize: "0.82rem",
-    color: isExpired ? "#ef4444" : "#64748b",
-    fontWeight: isExpired ? "600" : "400",
+    fontSize: "0.8rem",
+    colour,
   }),
   progressBarTrack: {
     width: "100%",
-    height: "6px",
-    backgroundColor: "#0f172a",
+    height: "5px",
+    backgroundcolour: colours.bg,
     borderRadius: "999px",
     overflow: "hidden",
-    marginTop: "6px",
+    marginTop: "4px",
   },
-  progressBarFill: (pct, isExpired) => ({
+  progressBarFill: (pct, colour) => ({
     height: "100%",
     width: `${pct}%`,
-    backgroundColor: isExpired ? "#ef4444" : pct < 25 ? "#f59e0b" : "#38bdf8",
+    backgroundcolour: colour,
     borderRadius: "999px",
-    transition: "width 1s linear, background-color 0.5s ease",
+    transition: "width 1s linear, background-colour 0.5s ease",
   }),
-  loadingText: {
-    color: "#94a3b8",
-    fontSize: "0.85rem",
+  intervalNote: {
+    fontSize: "0.72rem",
+    colour: colours.textMuted,
     margin: 0,
   },
-  errorText: {
-    color: "#ef4444",
-    fontSize: "0.85rem",
-    margin: 0,
-  },
+  loadingText: { colour: colours.textSecond, fontSize: "0.85rem", margin: 0 },
+  errorText: { colour: colours.danger, fontSize: "0.85rem", margin: 0 },
 };
 
-function formatTimeRemaining(ms) {
+function getTimercolour(pct) {
+  if (pct <= 0) return colours.timerDanger;
+  if (pct < 20) return colours.timerWarn;
+  return colours.timerSafe;
+}
+
+function formatTime(ms) {
   if (ms <= 0) return null;
   const totalSeconds = Math.floor(ms / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  return {
-    display: `${String(hours).padStart(2, "0")}h ${String(minutes).padStart(2, "0")}m ${String(seconds).padStart(2, "0")}s`,
-    hours,
-    minutes,
-    seconds,
-  };
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const sec = totalSeconds % 60;
+  return `${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}m ${String(sec).padStart(2, "0")}s`;
 }
 
 export default function CountdownTimer({ lastCheckInOverride }) {
+  const { user } = useAuth();
   const [lastCheckIn, setLastCheckIn] = useState(null);
+  const [intervalHours, setIntervalHours] = useState(72);
   const [fetchStatus, setFetchStatus] = useState("loading");
   const [timeRemaining, setTimeRemaining] = useState(null);
   const intervalRef = useRef(null);
 
-  // Fetch last_check_in from Supabase on mount
   useEffect(() => {
-    const fetchLastCheckIn = async () => {
+    if (!user) return;
+
+    const fetch = async () => {
       setFetchStatus("loading");
 
       const { data, error } = await supabase
         .from("kodo_members")
-        .select("last_check_in")
-        .eq("email", USER_EMAIL)
+        .select("last_check_in, check_in_interval_hours")
+        .eq("email", user.email)
         .single();
 
-      if (error || !data) {
-        setFetchStatus("error");
-        return;
-      }
+      if (error || !data) { setFetchStatus("error"); return; }
 
       setLastCheckIn(data.last_check_in);
+      setIntervalHours(data.check_in_interval_hours || 72);
       setFetchStatus("loaded");
     };
 
-    fetchLastCheckIn();
-  }, []);
+    fetch();
+  }, [user]);
 
-  // If parent passes an updated check-in (after button press), use that
   useEffect(() => {
     if (lastCheckInOverride) {
       setLastCheckIn(lastCheckInOverride);
@@ -119,67 +116,54 @@ export default function CountdownTimer({ lastCheckInOverride }) {
     }
   }, [lastCheckInOverride]);
 
-  // Tick countdown every second
   useEffect(() => {
     if (fetchStatus !== "loaded" || !lastCheckIn) return;
 
+    const windowMs = intervalHours * 60 * 60 * 1000;
+
     const tick = () => {
-      const checkInTime = new Date(lastCheckIn).getTime();
-      const deadline = checkInTime + WINDOW_MS;
-      const now = Date.now();
-      const remaining = deadline - now;
-      setTimeRemaining(remaining);
+      const deadline = new Date(lastCheckIn).getTime() + windowMs;
+      setTimeRemaining(deadline - Date.now());
     };
 
-    tick(); // Run immediately
+    tick();
     intervalRef.current = setInterval(tick, 1000);
-
     return () => clearInterval(intervalRef.current);
-  }, [lastCheckIn, fetchStatus]);
+  }, [lastCheckIn, fetchStatus, intervalHours]);
 
+  const windowMs = intervalHours * 60 * 60 * 1000;
   const isExpired = timeRemaining !== null && timeRemaining <= 0;
-  const formatted = timeRemaining !== null ? formatTimeRemaining(timeRemaining) : null;
-
-  // Percentage of window elapsed (inverted for "remaining")
-  const percentRemaining =
-    timeRemaining !== null && timeRemaining > 0
-      ? Math.min(100, (timeRemaining / WINDOW_MS) * 100)
-      : 0;
+  const pct = timeRemaining > 0 ? Math.min(100, (timeRemaining / windowMs) * 100) : 0;
+  const timercolour = getTimercolour(pct);
+  const formatted = timeRemaining !== null ? formatTime(timeRemaining) : null;
 
   return (
-    <div style={styles.card}>
-      <p style={styles.label}>Check-in Window</p>
+    <div style={s.card}>
+      <p style={s.label}>Check-in Window</p>
 
-      {fetchStatus === "loading" && (
-        <p style={styles.loadingText}>Loading timer…</p>
-      )}
-
-      {fetchStatus === "error" && (
-        <p style={styles.errorText}>⚠ Could not load check-in data.</p>
-      )}
-
+      {fetchStatus === "loading" && <p style={s.loadingText}>Loading timer…</p>}
+      {fetchStatus === "error" && <p style={s.errorText}>⚠ Could not load check-in data.</p>}
       {fetchStatus === "loaded" && !lastCheckIn && (
-        <p style={styles.loadingText}>No check-in recorded yet. Tap the button above.</p>
+        <p style={s.loadingText}>No check-in yet. Tap the button above.</p>
       )}
 
       {fetchStatus === "loaded" && lastCheckIn && (
         <>
           {isExpired ? (
             <>
-              <p style={styles.timerDisplay(true)}>TIME EXPIRED</p>
-              <p style={styles.subtext(true)}>
-                ⚠ Your emergency contact has been notified.
-              </p>
+              <p style={s.timerDisplay(colours.timerDanger)}>TIME EXPIRED</p>
+              <p style={s.subtext(colours.timerDanger)}>⚠ Your emergency contact has been notified.</p>
             </>
           ) : (
             <>
-              <p style={styles.timerDisplay(false)}>
-                {formatted ? formatted.display : "Calculating…"}
+              <p style={s.timerDisplay(timercolour)}>
+                {formatted ?? "Calculating…"}
               </p>
-              <p style={styles.subtext(false)}>remaining before alert is triggered</p>
-              <div style={styles.progressBarTrack}>
-                <div style={styles.progressBarFill(percentRemaining, isExpired)} />
+              <p style={s.subtext(colours.textSecond)}>remaining before alert is triggered</p>
+              <div style={s.progressBarTrack}>
+                <div style={s.progressBarFill(pct, timercolour)} />
               </div>
+              <p style={s.intervalNote}>window set to {intervalHours}h — change in profile</p>
             </>
           )}
         </>

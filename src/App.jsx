@@ -1,120 +1,133 @@
 import { useState } from "react";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import Auth from "./components/Auth";
 import CheckInButton from "./components/CheckInButton";
 import CountdownTimer from "./components/CountdownTimer";
-import EmergencyContact from "./components/EmergencyContact";
+import Profile from "./components/Profile";
+import { colours } from "./theme";
 
-const styles = {
+const s = {
   page: {
     minHeight: "100vh",
-    backgroundColor: "#0f172a",
-    color: "#e2e8f0",
+    backgroundcolour: colours.bg,
+    colour: colours.textPrimary,
     fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    padding: "48px 20px 80px",
+    padding: "40px 20px 80px",
     boxSizing: "border-box",
   },
-  header: {
-    textAlign: "center",
-    marginBottom: "48px",
+  topBar: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
     maxWidth: "480px",
+    marginBottom: "40px",
   },
   logo: {
-    fontSize: "2.4rem",
+    fontSize: "2rem",
     fontWeight: "800",
     letterSpacing: "-1px",
-    color: "#f8fafc",
-    margin: "0 0 6px",
+    colour: colours.textPrimary,
+    margin: 0,
   },
-  logoAccent: {
-    color: "#3b82f6",
-  },
+  logoAccent: { colour: colours.primary },
   tagline: {
-    fontSize: "0.95rem",
-    color: "#64748b",
-    margin: "0 0 16px",
-    lineHeight: "1.6",
+    fontSize: "0.8rem",
+    colour: colours.textSecond,
+    margin: "3px 0 0",
   },
-  divider: {
-    width: "40px",
-    height: "3px",
-    backgroundColor: "#1e293b",
-    border: "none",
-    borderRadius: "999px",
-    margin: "0 auto",
+  signOutBtn: {
+    padding: "6px 14px",
+    borderRadius: "7px",
+    border: `1.5px solid ${colours.border}`,
+    backgroundcolour: "transparent",
+    colour: colours.textSecond,
+    fontSize: "0.78rem",
+    fontWeight: "600",
+    cursor: "pointer",
   },
   main: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: "32px",
+    gap: "24px",
     width: "100%",
     maxWidth: "480px",
   },
   sectionLabel: {
-    fontSize: "0.7rem",
+    fontSize: "0.66rem",
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: "2px",
-    color: "#334155",
+    colour: colours.textMuted,
     textAlign: "center",
-    marginBottom: "4px",
+    margin: "0 0 6px",
   },
   footer: {
     marginTop: "60px",
     textAlign: "center",
-    color: "#1e293b",
-    fontSize: "0.75rem",
+    colour: colours.textMuted,
+    fontSize: "0.72rem",
+  },
+  loading: {
+    minHeight: "100vh",
+    backgroundcolour: colours.bg,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    colour: colours.textSecond,
+    fontFamily: "'Inter', system-ui, sans-serif",
   },
 };
 
-export default function App() {
-  // When the user checks in, lift the new timestamp up to CountdownTimer
+function Dashboard() {
+  const { user, authLoading, signOut } = useAuth();
   const [lastCheckIn, setLastCheckIn] = useState(null);
 
+  if (authLoading) return <div style={s.loading}>Loading Kodo…</div>;
+  if (!user) return <Auth />;
+
   return (
-    <div style={styles.page}>
+    <div style={s.page}>
+      <div style={s.topBar}>
+        <div>
+          <h1 style={s.logo}>Ko<span style={s.logoAccent}>do</span></h1>
+          <p style={s.tagline}>Your quiet safety net.</p>
+        </div>
+        <button style={s.signOutBtn} onClick={signOut}>Sign Out</button>
+      </div>
 
-      {/* ── Header ── */}
-      <header style={styles.header}>
-        <h1 style={styles.logo}>
-          Ko<span style={styles.logoAccent}>do</span>
-        </h1>
-        <p style={styles.tagline}>
-          A quiet safety net for people living alone. Check in every 72 hours
-          so your emergency contact knows you're okay. No news is good news.
-        </p>
-        <hr style={styles.divider} />
-      </header>
-
-      {/* ── Main Content ── */}
-      <main style={styles.main}>
-
-        {/* Check-In Button */}
+      <main style={s.main}>
         <section style={{ textAlign: "center", width: "100%" }}>
-          <p style={styles.sectionLabel}>Your daily check-in</p>
-          <CheckInButton onCheckIn={(timestamp) => setLastCheckIn(timestamp)} />
+          <p style={s.sectionLabel}>Your check-in</p>
+          <CheckInButton onCheckIn={(ts) => setLastCheckIn(ts)} />
         </section>
 
-        {/* Countdown Timer */}
         <section style={{ width: "100%" }}>
-          <p style={styles.sectionLabel}>Time remaining</p>
+          <p style={s.sectionLabel}>Time remaining</p>
           <CountdownTimer lastCheckInOverride={lastCheckIn} />
         </section>
 
-        {/* Emergency Contact */}
         <section style={{ width: "100%" }}>
-          <EmergencyContact />
+          <p style={s.sectionLabel}>Settings</p>
+          <Profile />
         </section>
-
       </main>
 
-      {/* ── Footer ── */}
-      <footer style={styles.footer}>
+      <footer style={s.footer}>
         <p>Kodo — designed with care for people living alone.</p>
       </footer>
-
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <Dashboard />
+    </AuthProvider>
   );
 }

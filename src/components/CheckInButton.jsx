@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { supabase } from "../services/supabaseClient";
+import { useAuth } from "../context/AuthContext";
+import { colours } from "../theme";
 
-const USER_EMAIL = "Miloabara@gmail.com";
-
-const styles = {
+const s = {
   wrapper: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: "12px",
+    gap: "14px",
   },
   button: (status) => ({
     width: "220px",
@@ -18,48 +18,42 @@ const styles = {
     cursor: status === "loading" || status === "success" ? "not-allowed" : "pointer",
     fontSize: "1.4rem",
     fontWeight: "700",
-    color: "#ffffff",
+    colour: "#ffffff",
     letterSpacing: "0.5px",
-    boxShadow:
-      status === "success"
-        ? "0 0 0 8px rgba(34, 197, 94, 0.25)"
-        : "0 0 0 8px rgba(59, 130, 246, 0.25)",
-    backgroundColor:
-      status === "success"
-        ? "#22c55e"
-        : status === "loading"
-        ? "#93c5fd"
-        : "#3b82f6",
-    transition: "background-color 0.4s ease, box-shadow 0.4s ease, transform 0.1s ease",
+    boxShadow: status === "success"
+      ? `0 0 0 10px ${colours.successGlow}`
+      : `0 0 0 10px ${colours.primaryGlow}`,
+    backgroundcolour: status === "success"
+      ? colours.success
+      : status === "loading"
+      ? colours.borderLight
+      : colours.primary,
+    transition: "background-colour 0.4s ease, box-shadow 0.4s ease, transform 0.1s ease",
     transform: status === "loading" ? "scale(0.97)" : "scale(1)",
     outline: "none",
   }),
+  subtitle: {
+    colour: colours.textSecond,
+    fontSize: "0.8rem",
+    textAlign: "center",
+    margin: 0,
+  },
   errorText: {
-    color: "#ef4444",
+    colour: colours.danger,
     fontSize: "0.85rem",
     maxWidth: "260px",
     textAlign: "center",
-  },
-  subtitleText: {
-    color: "#94a3b8",
-    fontSize: "0.8rem",
-    textAlign: "center",
+    margin: 0,
   },
 };
 
-function getButtonLabel(status) {
-  if (status === "loading") return "Updating…";
-  if (status === "success") return "✓ Safe";
-  return "I'm Safe";
-}
-
 export default function CheckInButton({ onCheckIn }) {
-  const [status, setStatus] = useState("idle"); // idle | loading | success | error
+  const { user } = useAuth();
+  const [status, setStatus] = useState("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
   const handleCheckIn = async () => {
     if (status === "loading" || status === "success") return;
-
     setStatus("loading");
     setErrorMsg("");
 
@@ -68,7 +62,7 @@ export default function CheckInButton({ onCheckIn }) {
     const { error } = await supabase
       .from("kodo_members")
       .update({ last_check_in: now })
-      .eq("email", USER_EMAIL);
+      .eq("email", user.email);
 
     if (error) {
       setStatus("error");
@@ -78,32 +72,21 @@ export default function CheckInButton({ onCheckIn }) {
 
     setStatus("success");
     if (onCheckIn) onCheckIn(now);
-
-    setTimeout(() => {
-      setStatus("idle");
-    }, 3000);
+    setTimeout(() => setStatus("idle"), 3000);
   };
 
   return (
-    <div style={styles.wrapper}>
+    <div style={s.wrapper}>
       <button
-        style={styles.button(status)}
+        style={s.button(status)}
         onClick={handleCheckIn}
         disabled={status === "loading" || status === "success"}
         aria-label="Check in to confirm you are safe"
       >
-        {getButtonLabel(status)}
+        {status === "loading" ? "Updating…" : status === "success" ? "✓ Safe" : "I'm Safe"}
       </button>
-
-      <p style={styles.subtitleText}>
-        Tap to confirm you're safe. Required every 72 hours.
-      </p>
-
-      {status === "error" && (
-        <p style={styles.errorText} role="alert">
-          ⚠ {errorMsg}
-        </p>
-      )}
+      <p style={s.subtitle}>Tap to confirm you're safe.</p>
+      {status === "error" && <p style={s.errorText} role="alert">⚠ {errorMsg}</p>}
     </div>
   );
 }
