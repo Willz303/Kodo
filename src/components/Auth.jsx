@@ -97,6 +97,17 @@ const s = {
     cursor: disabled ? "not-allowed" : "pointer",
     transition: "background-colour 0.2s",
   }),
+  forgotLink: {
+    background: "none",
+    border: "none",
+    colour: colours.textSecond,
+    fontSize: "0.78rem",
+    cursor: "pointer",
+    textAlign: "right",
+    padding: 0,
+    textDecoration: "underline",
+    alignSelf: "flex-end",
+  },
   successText: {
     colour: colours.success,
     fontSize: "0.85rem",
@@ -110,10 +121,20 @@ const s = {
     textAlign: "center",
     margin: 0,
   },
+  backLink: {
+    background: "none",
+    border: "none",
+    colour: colours.textSecond,
+    fontSize: "0.78rem",
+    cursor: "pointer",
+    textAlign: "center",
+    padding: 0,
+    textDecoration: "underline",
+  },
 };
 
 export default function Auth() {
-  const [mode, setMode] = useState("login");
+  const [mode, setMode] = useState("login"); // login | signup | forgot
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState("idle");
@@ -122,11 +143,28 @@ export default function Auth() {
   const reset = () => { setStatus("idle"); setMessage(""); };
 
   const handleSubmit = async () => {
+    if (mode === "forgot") {
+      if (!email) {
+        setStatus("error");
+        setMessage("Please enter your email address.");
+        return;
+      }
+      setStatus("loading");
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: "http://localhost:5173",
+      });
+      if (error) { setStatus("error"); setMessage(error.message); return; }
+      setStatus("success");
+      setMessage("Password reset email sent. Check your inbox and click the link.");
+      return;
+    }
+
     if (!email || !password) {
       setStatus("error");
       setMessage("Please fill in both fields.");
       return;
     }
+
     setStatus("loading");
 
     if (mode === "signup") {
@@ -146,39 +184,99 @@ export default function Auth() {
   return (
     <div style={s.page}>
       <div style={s.card}>
+
+        {/* Logo */}
         <div>
           <p style={s.logo}>Ko<span style={s.logoAccent}>do</span></p>
           <p style={s.tagline}>A quiet safety net for people living alone.</p>
         </div>
 
-        <div style={s.tabRow}>
-          <button style={s.tab(mode === "login")} onClick={() => { setMode("login"); reset(); }}>Log In</button>
-          <button style={s.tab(mode === "signup")} onClick={() => { setMode("signup"); reset(); }}>Sign Up</button>
-        </div>
+        {/* Forgot password view */}
+        {mode === "forgot" ? (
+          <>
+            <div style={s.fieldGroup}>
+              <div>
+                <label style={s.label}>Email address</label>
+                <input
+                  style={s.input}
+                  type="email"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); reset(); }}
+                  placeholder="you@example.com"
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
 
-        <div style={s.fieldGroup}>
-          <div>
-            <label style={s.label}>Email address</label>
-            <input style={s.input} type="email" value={email}
-              onChange={(e) => { setEmail(e.target.value); reset(); }}
-              placeholder="you@example.com" disabled={isLoading} />
-          </div>
-          <div>
-            <label style={s.label}>Password</label>
-            <input style={s.input} type="password" value={password}
-              onChange={(e) => { setPassword(e.target.value); reset(); }}
-              placeholder={mode === "signup" ? "Min. 6 characters" : "Your password"}
-              disabled={isLoading} />
-          </div>
-        </div>
+            {status === "success" && <p style={s.successText} role="status">✓ {message}</p>}
+            {status === "error" && <p style={s.errorText} role="alert">⚠ {message}</p>}
 
-        {status === "success" && <p style={s.successText} role="status">✓ {message}</p>}
-        {status === "error" && <p style={s.errorText} role="alert">⚠ {message}</p>}
+            {status !== "success" && (
+              <button style={s.primaryButton(isLoading)} onClick={handleSubmit} disabled={isLoading}>
+                {isLoading ? "Sending…" : "Send Reset Email"}
+              </button>
+            )}
 
-        {status !== "success" && (
-          <button style={s.primaryButton(isLoading)} onClick={handleSubmit} disabled={isLoading}>
-            {isLoading ? "Please wait…" : mode === "signup" ? "Create Account" : "Log In"}
-          </button>
+            <button style={s.backLink} onClick={() => { setMode("login"); reset(); }}>
+              ← Back to login
+            </button>
+          </>
+        ) : (
+          <>
+            {/* Login / Signup toggle */}
+            <div style={s.tabRow}>
+              <button style={s.tab(mode === "login")} onClick={() => { setMode("login"); reset(); }}>
+                Log In
+              </button>
+              <button style={s.tab(mode === "signup")} onClick={() => { setMode("signup"); reset(); }}>
+                Sign Up
+              </button>
+            </div>
+
+            {/* Fields */}
+            <div style={s.fieldGroup}>
+              <div>
+                <label style={s.label}>Email address</label>
+                <input
+                  style={s.input}
+                  type="email"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); reset(); }}
+                  placeholder="you@example.com"
+                  disabled={isLoading}
+                />
+              </div>
+              <div>
+                <label style={s.label}>Password</label>
+                <input
+                  style={s.input}
+                  type="password"
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); reset(); }}
+                  placeholder={mode === "signup" ? "Min. 6 characters" : "Your password"}
+                  disabled={isLoading}
+                />
+              </div>
+              {mode === "login" && (
+                <button style={s.forgotLink} onClick={() => { setMode("forgot"); reset(); }}>
+                  Forgot password?
+                </button>
+              )}
+            </div>
+
+            {status === "success" && <p style={s.successText} role="status">✓ {message}</p>}
+            {status === "error" && <p style={s.errorText} role="alert">⚠ {message}</p>}
+
+            {status !== "success" && (
+              <button
+                style={s.primaryButton(isLoading)}
+                onClick={handleSubmit}
+                disabled={isLoading}
+              >
+                {isLoading ? "Please wait…" : mode === "signup" ? "Create Account" : "Log In"}
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>

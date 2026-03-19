@@ -75,7 +75,7 @@ const s = {
     padding: "9px",
     borderRadius: "8px",
     border: `1.5px solid ${active ? colours.primary : colours.border}`,
-    backgroundcolour: active ? `rgba(74,124,89,0.12)` : "transparent",
+    backgroundcolour: active ? `rgba(58,138,74,0.12)` : "transparent",
     colour: active ? colours.primary : colours.textSecond,
     fontWeight: "600",
     fontSize: "0.82rem",
@@ -159,13 +159,22 @@ export default function Profile() {
   const [saveStatus, setSaveStatus] = useState("idle");
   const [saveMessage, setSaveMessage] = useState("");
 
+  // Personal fields
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
+
+  // Emergency contact fields
   const [ecName, setEcName] = useState("");
   const [ecEmail, setEcEmail] = useState("");
   const [ecPhone, setEcPhone] = useState("");
   const [ecMethod, setEcMethod] = useState("email");
   const [intervalHours, setIntervalHours] = useState(72);
+
+  // Password change fields
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordStatus, setPasswordStatus] = useState("idle");
+  const [passwordMessage, setPasswordMessage] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -180,7 +189,6 @@ export default function Profile() {
         .single();
 
       if (error || !data) {
-        // Row might not exist yet — insert it then retry
         if (error?.code === "PGRST116") {
           await supabase.from("kodo_members").insert({
             id: user.id,
@@ -248,7 +256,41 @@ export default function Profile() {
     setTimeout(() => { setSaveStatus("idle"); setSaveMessage(""); }, 3000);
   };
 
+  const handleChangePassword = async () => {
+    if (!newPassword || !confirmPassword) {
+      setPasswordStatus("error");
+      setPasswordMessage("Please fill in both password fields.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPasswordStatus("error");
+      setPasswordMessage("Password must be at least 6 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordStatus("error");
+      setPasswordMessage("Passwords do not match.");
+      return;
+    }
+
+    setPasswordStatus("saving");
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+    if (error) {
+      setPasswordStatus("error");
+      setPasswordMessage(error.message);
+      return;
+    }
+
+    setPasswordStatus("success");
+    setPasswordMessage("Password updated successfully.");
+    setNewPassword("");
+    setConfirmPassword("");
+    setTimeout(() => { setPasswordStatus("idle"); setPasswordMessage(""); }, 3000);
+  };
+
   const isSaving = saveStatus === "saving";
+  const isChangingPassword = passwordStatus === "saving";
 
   return (
     <div style={s.card}>
@@ -322,7 +364,6 @@ export default function Profile() {
                   onChange={(e) => setEcName(e.target.value)}
                   placeholder="e.g. Sarah Johnson" disabled={isSaving} />
               </div>
-
               <div>
                 <label style={s.label}>Alert Method</label>
                 <div style={s.methodRow}>
@@ -336,7 +377,6 @@ export default function Profile() {
                   </button>
                 </div>
               </div>
-
               {ecMethod === "email" && (
                 <div>
                   <label style={s.label}>Contact Email</label>
@@ -345,7 +385,6 @@ export default function Profile() {
                     placeholder="e.g. sarah@example.com" disabled={isSaving} />
                 </div>
               )}
-
               {ecMethod === "phone" && (
                 <div>
                   <label style={s.label}>Contact Phone Number</label>
@@ -366,6 +405,38 @@ export default function Profile() {
           <button style={s.saveButton(isSaving)} onClick={handleSave} disabled={isSaving}>
             {isSaving ? "Saving…" : "Save Profile"}
           </button>
+
+          <hr style={s.divider} />
+
+          {/* Change password */}
+          <div>
+            <p style={s.sectionLabel}>🔐 Change Password</p>
+            <div style={s.fieldGroup}>
+              <div>
+                <label style={s.label}>New Password</label>
+                <input style={s.input} type="password" value={newPassword}
+                  onChange={(e) => { setNewPassword(e.target.value); setPasswordStatus("idle"); }}
+                  placeholder="Min. 6 characters" disabled={isChangingPassword} />
+              </div>
+              <div>
+                <label style={s.label}>Confirm New Password</label>
+                <input style={s.input} type="password" value={confirmPassword}
+                  onChange={(e) => { setConfirmPassword(e.target.value); setPasswordStatus("idle"); }}
+                  placeholder="Repeat new password" disabled={isChangingPassword} />
+              </div>
+            </div>
+
+            {passwordStatus === "success" && <p style={{ ...s.successText, marginTop: "8px" }} role="status">✓ {passwordMessage}</p>}
+            {passwordStatus === "error" && <p style={{ ...s.errorText, marginTop: "8px" }} role="alert">⚠ {passwordMessage}</p>}
+
+            <button
+              style={{ ...s.saveButton(isChangingPassword), marginTop: "12px", backgroundcolour: isChangingPassword ? colours.borderLight : colours.borderLight, colour: isChangingPassword ? colours.textMuted : colours.textSecond, border: `1.5px solid ${colours.border}` }}
+              onClick={handleChangePassword}
+              disabled={isChangingPassword}
+            >
+              {isChangingPassword ? "Updating…" : "Update Password"}
+            </button>
+          </div>
         </>
       )}
     </div>
