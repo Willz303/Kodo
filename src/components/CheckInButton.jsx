@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { supabase } from "../services/supabaseClient";
 import { useAuth } from "../context/AuthContext";
-import { colours } from "../theme";
+import { getColors } from "../theme";
+
+const colors = getColors(false);
 
 const s = {
   wrapper: {
@@ -18,28 +20,28 @@ const s = {
     cursor: status === "loading" || status === "success" ? "not-allowed" : "pointer",
     fontSize: "1.4rem",
     fontWeight: "700",
-    colour: "#ffffff",
+    color: "#ffffff",
     letterSpacing: "0.5px",
     boxShadow: status === "success"
-      ? `0 0 0 10px ${colours.successGlow}`
-      : `0 0 0 10px ${colours.primaryGlow}`,
-    backgroundcolour: status === "success"
-      ? colours.success
+      ? `0 0 0 10px ${colors.successGlow}`
+      : `0 0 0 10px ${colors.primaryGlow}`,
+    backgroundColor: status === "success"
+      ? colors.success
       : status === "loading"
-      ? colours.borderLight
-      : colours.primary,
-    transition: "background-colour 0.4s ease, box-shadow 0.4s ease, transform 0.1s ease",
+      ? colors.borderLight
+      : colors.primary,
+    transition: "background-color 0.4s ease, box-shadow 0.4s ease, transform 0.1s ease",
     transform: status === "loading" ? "scale(0.97)" : "scale(1)",
     outline: "none",
   }),
   subtitle: {
-    colour: colours.textSecond,
+    color: colors.textSecond,
     fontSize: "0.8rem",
     textAlign: "center",
     margin: 0,
   },
   errorText: {
-    colour: colours.danger,
+    color: colors.danger,
     fontSize: "0.85rem",
     maxWidth: "260px",
     textAlign: "center",

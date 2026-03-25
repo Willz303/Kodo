@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../services/supabaseClient";
 import { useAuth } from "../context/AuthContext";
-import { colours } from "../theme";
+import { getColors } from "../theme";
+
+const colors = getColors(false);
 
 const s = {
   card: {
-    backgroundcolour: colours.surface,
+    backgroundColor: colors.surface,
     borderRadius: "16px",
-    border: `1px solid ${colours.border}`,
+    border: `1px solid ${colors.border}`,
     padding: "24px 28px",
     width: "100%",
     maxWidth: "480px",
@@ -24,50 +26,50 @@ const s = {
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: "1.8px",
-    colour: colours.textMuted,
+    color: colors.textMuted,
   },
-  timerDisplay: (colour) => ({
+  timerDisplay: (color) => ({
     margin: 0,
     fontSize: "2.6rem",
     fontWeight: "700",
     fontVariantNumeric: "tabular-nums",
-    colour,
+    color,
     lineHeight: 1.2,
     letterSpacing: "-1px",
   }),
-  subtext: (colour) => ({
+  subtext: (color) => ({
     margin: 0,
     fontSize: "0.8rem",
-    colour,
+    color,
   }),
   progressBarTrack: {
     width: "100%",
     height: "5px",
-    backgroundcolour: colours.bg,
+    backgroundColor: colors.bg,
     borderRadius: "999px",
     overflow: "hidden",
     marginTop: "4px",
   },
-  progressBarFill: (pct, colour) => ({
+  progressBarFill: (pct, color) => ({
     height: "100%",
     width: `${pct}%`,
-    backgroundcolour: colour,
+    backgroundColor: color,
     borderRadius: "999px",
-    transition: "width 1s linear, background-colour 0.5s ease",
+    transition: "width 1s linear, background-color 0.5s ease",
   }),
   intervalNote: {
     fontSize: "0.72rem",
-    colour: colours.textMuted,
+    color: colors.textMuted,
     margin: 0,
   },
-  loadingText: { colour: colours.textSecond, fontSize: "0.85rem", margin: 0 },
-  errorText: { colour: colours.danger, fontSize: "0.85rem", margin: 0 },
+  loadingText: { color: colors.textSecond, fontSize: "0.85rem", margin: 0 },
+  errorText: { color: colors.danger, fontSize: "0.85rem", margin: 0 },
 };
 
-function getTimercolour(pct) {
-  if (pct <= 0) return colours.timerDanger;
-  if (pct < 20) return colours.timerWarn;
-  return colours.timerSafe;
+function getTimercolor(pct) {
+  if (pct <= 0) return colors.timerDanger;
+  if (pct < 20) return colors.timerWarn;
+  return colors.timerSafe;
 }
 
 function formatTime(ms) {
@@ -134,7 +136,7 @@ export default function CountdownTimer({ lastCheckInOverride }) {
   const windowMs = intervalHours * 60 * 60 * 1000;
   const isExpired = timeRemaining !== null && timeRemaining <= 0;
   const pct = timeRemaining > 0 ? Math.min(100, (timeRemaining / windowMs) * 100) : 0;
-  const timercolour = getTimercolour(pct);
+  const timercolor = getTimercolor(pct);
   const formatted = timeRemaining !== null ? formatTime(timeRemaining) : null;
 
   return (
@@ -151,17 +153,17 @@ export default function CountdownTimer({ lastCheckInOverride }) {
         <>
           {isExpired ? (
             <>
-              <p style={s.timerDisplay(colours.timerDanger)}>TIME EXPIRED</p>
-              <p style={s.subtext(colours.timerDanger)}>⚠ Your emergency contact has been notified.</p>
+              <p style={s.timerDisplay(colors.timerDanger)}>TIME EXPIRED</p>
+              <p style={s.subtext(colors.timerDanger)}>⚠ Your emergency contact has been notified.</p>
             </>
           ) : (
             <>
-              <p style={s.timerDisplay(timercolour)}>
+              <p style={s.timerDisplay(timercolor)}>
                 {formatted ?? "Calculating…"}
               </p>
-              <p style={s.subtext(colours.textSecond)}>remaining before alert is triggered</p>
+              <p style={s.subtext(colors.textSecond)}>remaining before alert is triggered</p>
               <div style={s.progressBarTrack}>
-                <div style={s.progressBarFill(pct, timercolour)} />
+                <div style={s.progressBarFill(pct, timercolor)} />
               </div>
               <p style={s.intervalNote}>window set to {intervalHours}h — change in profile</p>
             </>

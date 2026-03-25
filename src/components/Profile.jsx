@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../services/supabaseClient";
 import { useAuth } from "../context/AuthContext";
-import { colours } from "../theme";
+import { getColors } from "../theme";
+
+const colors = getColors(false);
 
 const s = {
   card: {
-    backgroundcolour: colours.surface,
+    backgroundColor: colors.surface,
     borderRadius: "16px",
-    border: `1px solid ${colours.border}`,
+    border: `1px solid ${colors.border}`,
     padding: "24px 28px",
     width: "100%",
     maxWidth: "480px",
@@ -20,16 +22,16 @@ const s = {
     margin: 0,
     fontSize: "1rem",
     fontWeight: "700",
-    colour: colours.textPrimary,
+    color: colors.textPrimary,
   },
   subtext: {
     margin: "2px 0 0",
     fontSize: "0.78rem",
-    colour: colours.textSecond,
+    color: colors.textSecond,
   },
   divider: {
     height: "1px",
-    backgroundcolour: colours.border,
+    backgroundColor: colors.border,
     border: "none",
     margin: "2px 0",
   },
@@ -38,7 +40,7 @@ const s = {
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: "1.5px",
-    colour: colours.textMuted,
+    color: colors.textMuted,
     margin: "0 0 10px",
   },
   fieldGroup: {
@@ -49,7 +51,7 @@ const s = {
   label: {
     fontSize: "0.75rem",
     fontWeight: "600",
-    colour: colours.textSecond,
+    color: colors.textSecond,
     marginBottom: "5px",
     display: "block",
     textTransform: "uppercase",
@@ -59,9 +61,9 @@ const s = {
     width: "100%",
     padding: "10px 14px",
     borderRadius: "8px",
-    border: `1.5px solid ${colours.border}`,
-    backgroundcolour: colours.bg,
-    colour: colours.textPrimary,
+    border: `1.5px solid ${colors.border}`,
+    backgroundColor: colors.bg,
+    color: colors.textPrimary,
     fontSize: "0.9rem",
     outline: "none",
     boxSizing: "border-box",
@@ -74,9 +76,9 @@ const s = {
     flex: 1,
     padding: "9px",
     borderRadius: "8px",
-    border: `1.5px solid ${active ? colours.primary : colours.border}`,
-    backgroundcolour: active ? `rgba(58,138,74,0.12)` : "transparent",
-    colour: active ? colours.primary : colours.textSecond,
+    border: `1.5px solid ${active ? colors.primary : colors.border}`,
+    backgroundColor: active ? `rgba(58,138,74,0.12)` : "transparent",
+    color: active ? colors.primary : colors.textSecond,
     fontWeight: "600",
     fontSize: "0.82rem",
     cursor: "pointer",
@@ -87,38 +89,38 @@ const s = {
     padding: "11px",
     borderRadius: "9px",
     border: "none",
-    backgroundcolour: disabled ? colours.borderLight : colours.primary,
-    colour: disabled ? colours.textMuted : "#ffffff",
+    backgroundColor: disabled ? colors.borderLight : colors.primary,
+    color: disabled ? colors.textMuted : "#ffffff",
     fontWeight: "700",
     fontSize: "0.9rem",
     cursor: disabled ? "not-allowed" : "pointer",
-    transition: "background-colour 0.2s",
+    transition: "background-color 0.2s",
   }),
   successText: {
-    colour: colours.success,
+    color: colors.success,
     fontSize: "0.82rem",
     margin: 0,
     textAlign: "center",
   },
   errorText: {
-    colour: colours.danger,
+    color: colors.danger,
     fontSize: "0.82rem",
     margin: 0,
     textAlign: "center",
   },
   loadingText: {
-    colour: colours.textSecond,
+    color: colors.textSecond,
     fontSize: "0.82rem",
     margin: 0,
   },
   emailBadge: {
-    backgroundcolour: colours.bg,
+    backgroundColor: colors.bg,
     borderRadius: "7px",
     padding: "8px 12px",
     fontSize: "0.82rem",
-    colour: colours.textSecond,
+    color: colors.textSecond,
     fontFamily: "monospace",
-    border: `1px solid ${colours.border}`,
+    border: `1px solid ${colors.border}`,
   },
   intervalRow: {
     display: "flex",
@@ -129,9 +131,9 @@ const s = {
     width: "80px",
     padding: "10px 14px",
     borderRadius: "8px",
-    border: `1.5px solid ${colours.border}`,
-    backgroundcolour: colours.bg,
-    colour: colours.textPrimary,
+    border: `1.5px solid ${colors.border}`,
+    backgroundColor: colors.bg,
+    color: colors.textPrimary,
     fontSize: "0.9rem",
     outline: "none",
     boxSizing: "border-box",
@@ -139,16 +141,16 @@ const s = {
   },
   intervalLabel: {
     fontSize: "0.85rem",
-    colour: colours.textSecond,
+    color: colors.textSecond,
   },
   infoBox: {
-    backgroundcolour: colours.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
     borderRadius: "8px",
     padding: "10px 14px",
     fontSize: "0.78rem",
-    colour: colours.textSecond,
+    color: colors.textSecond,
     lineHeight: "1.6",
-    border: `1px solid ${colours.border}`,
+    border: `1px solid ${colors.border}`,
   },
 };
 
@@ -430,7 +432,7 @@ export default function Profile() {
             {passwordStatus === "error" && <p style={{ ...s.errorText, marginTop: "8px" }} role="alert">⚠ {passwordMessage}</p>}
 
             <button
-              style={{ ...s.saveButton(isChangingPassword), marginTop: "12px", backgroundcolour: isChangingPassword ? colours.borderLight : colours.borderLight, colour: isChangingPassword ? colours.textMuted : colours.textSecond, border: `1.5px solid ${colours.border}` }}
+              style={{ ...s.saveButton(isChangingPassword), marginTop: "12px", backgroundColor: isChangingPassword ? colors.borderLight : colors.borderLight, color: isChangingPassword ? colors.textMuted : colors.textSecond, border: `1.5px solid ${colors.border}` }}
               onClick={handleChangePassword}
               disabled={isChangingPassword}
             >
