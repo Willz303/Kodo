@@ -8,19 +8,19 @@ export function AuthProvider({ children }) {
   const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
+    // Get initial session first
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setAuthLoading(false);
     });
 
-    // Listen for auth changes (login, logout, magic link confirmation)
+    // Then listen for any changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         const currentUser = session?.user ?? null;
         setUser(currentUser);
+        setAuthLoading(false);
 
-        // If a new user just signed up, create their row in kodo_members
         if (_event === "SIGNED_IN" && currentUser) {
           const { data: existing } = await supabase
             .from("kodo_members")
