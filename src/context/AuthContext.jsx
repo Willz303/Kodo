@@ -8,32 +8,29 @@ export function AuthProvider({ children }) {
   const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session first
+    // 1. Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setAuthLoading(false);
     });
 
-    // Then listen for any changes
+    // 2. Listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         const currentUser = session?.user ?? null;
         setUser(currentUser);
         setAuthLoading(false);
 
-        if (_event === "SIGNED_IN" && currentUser) {
-          const { data: existing } = await supabase
-            .from("kodo_members")
-            .select("id")
-            .eq("email", currentUser.email)
-            .single();
+        // Auto-create row in kodo_members using upsert to prevent loops/406 errors
+        if (event === "SIGNED_IN" && currentUser) {
+          await supabase.from("kodo_members").upsert({
+            id: currentUser.id,
+            email: currentUser.email,
+          }, { onConflict: 'email' });
+        }
 
-          if (!existing) {
-            await supabase.from("kodo_members").insert({
-              email: currentUser.email,
-              id: currentUser.id,
-            });
-          }
+        if (event === "SIGNED_OUT") {
+          setUser(null);
         }
       }
     );
@@ -43,7 +40,7 @@ export function AuthProvider({ children }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    setUser(null);
+    setUser(null); // Ensure state is cleared immediately
   };
 
   return (

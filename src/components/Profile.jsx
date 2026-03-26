@@ -175,65 +175,45 @@ export default function Profile() {
   const [passwordMessage, setPasswordMessage] = useState("");
 
   const fetchProfile = async () => {
-    if (!user) return;
+    if (!user?.email) return;
     setFetchStatus("loading");
 
     const { data, error } = await supabase
       .from("kodo_members")
-      .select("full_name, phone_number, emergency_contact_name, emergency_contact_email, emergency_contact_phone, emergency_contact_method, check_in_interval_hours")
+      .select("*")
       .eq("email", user.email)
-      .single();
+      .maybeSingle();
 
-    if (error || !data) {
-      if (error?.code === "PGRST116") {
-        await supabase.from("kodo_members").insert({
-          id: user.id,
-          email: user.email,
-        });
-        setFetchStatus("loaded");
-        return;
-      }
+    if (error) {
       setFetchStatus("error");
       return;
     }
 
-    setFullName(data.full_name || "");
-    setPhoneNumber(data.phone_number || "");
-    setEcName(data.emergency_contact_name || "");
-    setEcEmail(data.emergency_contact_email || "");
-    setEcPhone(data.emergency_contact_phone || "");
-    setEcMethod(data.emergency_contact_method || "email");
-    setIntervalHours(data.check_in_interval_hours || 72);
+    if (data) {
+      setFullName(data.full_name || "");
+      setPhoneNumber(data.phone_number || "");
+      setEcName(data.emergency_contact_name || "");
+      setEcEmail(data.emergency_contact_email || "");
+      setEcPhone(data.emergency_contact_phone || "");
+      setEcMethod(data.emergency_contact_method || "email");
+      setIntervalHours(data.check_in_interval_hours || 72);
+    }
     setFetchStatus("loaded");
   };
 
-  // Fetch on mount
   useEffect(() => {
     fetchProfile();
-  }, [user]);
-
-
-  const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+  }, [user?.email]);
 
   const handleSave = async () => {
-    if (ecMethod === "email" && ecEmail && !isValidEmail(ecEmail)) {
-      setSaveStatus("error");
-      setSaveMessage("Please enter a valid emergency contact email.");
-      return;
-    }
     const hours = parseInt(intervalHours);
-    if (!hours || hours < 1 || hours > 72) {
-      setSaveStatus("error");
-      setSaveMessage("Check-in interval must be between 1 and 72 hours.");
-      return;
-    }
-
     setSaveStatus("saving");
-    setSaveMessage("");
 
     const { error } = await supabase
       .from("kodo_members")
-      .update({
+      .upsert({
+        id: user.id,
+        email: user.email,
         full_name: fullName.trim(),
         phone_number: phoneNumber.trim(),
         emergency_contact_name: ecName.trim(),
@@ -241,55 +221,38 @@ export default function Profile() {
         emergency_contact_phone: ecPhone.trim(),
         emergency_contact_method: ecMethod,
         check_in_interval_hours: hours,
-      })
-      .eq("email", user.email);
+      }, { onConflict: 'email' });
 
     if (error) {
       setSaveStatus("error");
-      setSaveMessage("Could not save profile. Please try again.");
-      return;
+      setSaveMessage("Could not save profile.");
+    } else {
+      setSaveStatus("success");
+      setSaveMessage("Profile saved.");
+      setTimeout(() => setSaveStatus("idle"), 3000);
     }
-
-    setSaveStatus("success");
-    setSaveMessage("Profile saved.");
-    setTimeout(() => { setSaveStatus("idle"); setSaveMessage(""); }, 3000);
   };
 
   const handleChangePassword = async () => {
-    if (!newPassword || !confirmPassword) {
-      setPasswordStatus("error");
-      setPasswordMessage("Please fill in both password fields.");
-      return;
-    }
-    if (newPassword.length < 6) {
-      setPasswordStatus("error");
-      setPasswordMessage("Password must be at least 6 characters.");
-      return;
-    }
     if (newPassword !== confirmPassword) {
       setPasswordStatus("error");
       setPasswordMessage("Passwords do not match.");
       return;
     }
-
     setPasswordStatus("saving");
     const { error } = await supabase.auth.updateUser({ password: newPassword });
-
     if (error) {
       setPasswordStatus("error");
       setPasswordMessage(error.message);
-      return;
+    } else {
+      setPasswordStatus("success");
+      setPasswordMessage("Password updated!");
+      setNewPassword("");
+      setConfirmPassword("");
     }
-
-    setPasswordStatus("success");
-    setPasswordMessage("Password updated successfully.");
-    setNewPassword("");
-    setConfirmPassword("");
-    setTimeout(() => { setPasswordStatus("idle"); setPasswordMessage(""); }, 3000);
   };
 
   const isSaving = saveStatus === "saving";
-  const isChangingPassword = passwordStatus === "saving";
 
   return (
     <div style={s.card}>
@@ -310,128 +273,42 @@ export default function Profile() {
 
       {fetchStatus === "loaded" && (
         <>
-          <div>
-            <p style={s.sectionLabel}>Personal Details</p>
-            <div style={s.fieldGroup}>
-              <div>
-                <label style={s.label}>Full Name</label>
-                <input style={s.input} type="text" value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="e.g. Alex Johnson" disabled={isSaving} />
-              </div>
-              <div>
-                <label style={s.label}>Your Phone Number</label>
-                <input style={s.input} type="tel" value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="e.g. +44 7700 900000" disabled={isSaving} />
-              </div>
-            </div>
+          <p style={s.sectionLabel}>Personal Details</p>
+          <div style={s.fieldGroup}>
+            <label style={s.label}>Full Name</label>
+            <input style={s.input} value={fullName} onChange={(e) => setFullName(e.target.value)} />
+            
+            <label style={s.label}>Phone</label>
+            <input style={s.input} value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} />
           </div>
 
           <hr style={s.divider} />
 
-          <div>
-            <p style={s.sectionLabel}>⏱ Check-in Interval</p>
-            <div style={s.intervalRow}>
-              <input
-                style={s.intervalInput}
-                type="number"
-                min="1"
-                max="72"
-                value={intervalHours}
-                onChange={(e) => setIntervalHours(e.target.value)}
-                disabled={isSaving}
-              />
-              <span style={s.intervalLabel}>hours (1–72)</span>
-            </div>
-            <div style={{ ...s.infoBox, marginTop: "10px" }}>
-              If you don't check in within this window, your emergency contact will be alerted.
-            </div>
+          <p style={s.sectionLabel}>⏱ Interval (Hours)</p>
+          <div style={s.intervalRow}>
+            <input style={s.intervalInput} type="number" value={intervalHours} onChange={(e) => setIntervalHours(e.target.value)} />
           </div>
 
           <hr style={s.divider} />
 
-          <div>
-            <p style={s.sectionLabel}>🚨 Emergency Contact</p>
-            <div style={s.fieldGroup}>
-              <div>
-                <label style={s.label}>Contact Name</label>
-                <input style={s.input} type="text" value={ecName}
-                  onChange={(e) => setEcName(e.target.value)}
-                  placeholder="e.g. Sarah Johnson" disabled={isSaving} />
-              </div>
-              <div>
-                <label style={s.label}>Alert Method</label>
-                <div style={s.methodRow}>
-                  <button style={s.methodBtn(ecMethod === "email")}
-                    onClick={() => setEcMethod("email")}>
-                    📧 Email
-                  </button>
-                  <button style={s.methodBtn(ecMethod === "phone")}
-                    onClick={() => setEcMethod("phone")}>
-                    📱 Phone (SMS)
-                  </button>
-                </div>
-              </div>
-              {ecMethod === "email" && (
-                <div>
-                  <label style={s.label}>Contact Email</label>
-                  <input style={s.input} type="email" value={ecEmail}
-                    onChange={(e) => setEcEmail(e.target.value)}
-                    placeholder="e.g. sarah@example.com" disabled={isSaving} />
-                </div>
-              )}
-              {ecMethod === "phone" && (
-                <div>
-                  <label style={s.label}>Contact Phone Number</label>
-                  <input style={s.input} type="tel" value={ecPhone}
-                    onChange={(e) => setEcPhone(e.target.value)}
-                    placeholder="e.g. +44 7700 900000" disabled={isSaving} />
-                  <p style={{ ...s.subtext, marginTop: "6px", fontSize: "0.75rem" }}>
-                    SMS alerts require a Twilio integration (coming soon).
-                  </p>
-                </div>
-              )}
+          <p style={s.sectionLabel}>🚨 Emergency Contact</p>
+          <div style={s.fieldGroup}>
+            <input style={s.input} placeholder="Contact Name" value={ecName} onChange={(e) => setEcName(e.target.value)} />
+            <div style={s.methodRow}>
+              <button style={s.methodBtn(ecMethod === "email")} onClick={() => setEcMethod("email")}>Email</button>
+              <button style={s.methodBtn(ecMethod === "phone")} onClick={() => setEcMethod("phone")}>Phone</button>
             </div>
+            {ecMethod === "email" ? 
+              <input style={s.input} placeholder="Email" value={ecEmail} onChange={(e) => setEcEmail(e.target.value)} /> :
+              <input style={s.input} placeholder="Phone" value={ecPhone} onChange={(e) => setEcPhone(e.target.value)} />
+            }
           </div>
-
-          {saveStatus === "success" && <p style={s.successText} role="status">✓ {saveMessage}</p>}
-          {saveStatus === "error" && <p style={s.errorText} role="alert">⚠ {saveMessage}</p>}
 
           <button style={s.saveButton(isSaving)} onClick={handleSave} disabled={isSaving}>
             {isSaving ? "Saving…" : "Save Profile"}
           </button>
-
-          <hr style={s.divider} />
-
-          <div>
-            <p style={s.sectionLabel}>🔐 Change Password</p>
-            <div style={s.fieldGroup}>
-              <div>
-                <label style={s.label}>New Password</label>
-                <input style={s.input} type="password" value={newPassword}
-                  onChange={(e) => { setNewPassword(e.target.value); setPasswordStatus("idle"); }}
-                  placeholder="Min. 6 characters" disabled={isChangingPassword} />
-              </div>
-              <div>
-                <label style={s.label}>Confirm New Password</label>
-                <input style={s.input} type="password" value={confirmPassword}
-                  onChange={(e) => { setConfirmPassword(e.target.value); setPasswordStatus("idle"); }}
-                  placeholder="Repeat new password" disabled={isChangingPassword} />
-              </div>
-            </div>
-
-            {passwordStatus === "success" && <p style={{ ...s.successText, marginTop: "8px" }} role="status">✓ {passwordMessage}</p>}
-            {passwordStatus === "error" && <p style={{ ...s.errorText, marginTop: "8px" }} role="alert">⚠ {passwordMessage}</p>}
-
-            <button
-              style={{ ...s.saveButton(isChangingPassword), marginTop: "12px", backgroundColor: colors.borderLight, color: colors.textSecond, border: `1.5px solid ${colors.border}` }}
-              onClick={handleChangePassword}
-              disabled={isChangingPassword}
-            >
-              {isChangingPassword ? "Updating…" : "Update Password"}
-            </button>
-          </div>
+          
+          {saveStatus === "success" && <p style={s.successText}>{saveMessage}</p>}
         </>
       )}
     </div>

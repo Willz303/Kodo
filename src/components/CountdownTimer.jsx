@@ -90,29 +90,35 @@ export default function CountdownTimer({ lastCheckInOverride }) {
   const intervalRef = useRef(null);
 
   const fetchData = async () => {
-    if (!user) return;
+    if (!user?.email) return;
     setFetchStatus("loading");
 
     const { data, error } = await supabase
       .from("kodo_members")
       .select("last_check_in, check_in_interval_hours")
       .eq("email", user.email)
-      .single();
+      .maybeSingle(); // Changed from .single() to fix 406 error
 
-    if (error || !data) { setFetchStatus("error"); return; }
+    if (error) { 
+        console.error("Fetch Error:", error);
+        setFetchStatus("error"); 
+        return; 
+    }
 
-    setLastCheckIn(data.last_check_in);
-    setIntervalHours(data.check_in_interval_hours || 72);
-    setFetchStatus("loaded");
+    if (data) {
+        setLastCheckIn(data.last_check_in);
+        setIntervalHours(data.check_in_interval_hours || 72);
+        setFetchStatus("loaded");
+    } else {
+        setFetchStatus("loaded");
+        setLastCheckIn(null);
+    }
   };
 
-  // Fetch on mount
   useEffect(() => {
     fetchData();
-  }, [user]);
+  }, [user?.email]);
 
-
-  // If parent passes a fresh check-in timestamp after button press
   useEffect(() => {
     if (lastCheckInOverride) {
       setLastCheckIn(lastCheckInOverride);
@@ -120,12 +126,10 @@ export default function CountdownTimer({ lastCheckInOverride }) {
     }
   }, [lastCheckInOverride]);
 
-  // Tick every second
   useEffect(() => {
     if (fetchStatus !== "loaded" || !lastCheckIn) return;
 
     const windowMs = intervalHours * 60 * 60 * 1000;
-
     const tick = () => {
       const deadline = new Date(lastCheckIn).getTime() + windowMs;
       setTimeRemaining(deadline - Date.now());
