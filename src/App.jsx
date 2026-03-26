@@ -63,6 +63,12 @@ function Dashboard() {
       margin: "0 0 6px",
       textAlign: "center"
     },
+    footer: {
+      marginTop: "60px",
+      textAlign: "center",
+      color: colors.textMuted,
+      fontSize: "0.72rem",
+    },
     loading: {
       minHeight: "100vh",
       backgroundColor: colors.bg,
@@ -81,6 +87,7 @@ function Dashboard() {
       <div style={s.topBar}>
         <div>
           <h1 style={s.logo}>Ko<span style={s.logoAccent}>do</span></h1>
+          <p style={{ margin: 0, fontSize: "0.8rem", color: colors.textSecond }}>Your quiet safety net.</p>
         </div>
         <div style={s.topBarRight}>
           <button style={s.btn} onClick={() => setDark(!dark)}>
@@ -106,6 +113,10 @@ function Dashboard() {
           <Profile />
         </section>
       </main>
+
+      <footer style={s.footer}>
+        <p>Kodo — designed with care for people living alone.</p>
+      </footer>
     </div>
   );
 }
