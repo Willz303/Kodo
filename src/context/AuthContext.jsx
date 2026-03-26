@@ -23,11 +23,11 @@ export function AuthProvider({ children }) {
 
         // Auto-create row in kodo_members using upsert to prevent loops/406 errors
         if (event === "SIGNED_IN" && currentUser) {
-          await supabase.from("kodo_members").upsert({
-            id: currentUser.id,
-            email: currentUser.email,
-          }, { onConflict: 'email' });
-        }
+  await supabase.from("kodo_members").upsert({
+    email: currentUser.email,
+    // Remove the id: currentUser.id line temporarily to test
+  }, { on_conflict: 'email' });
+}
 
         if (event === "SIGNED_OUT") {
           setUser(null);

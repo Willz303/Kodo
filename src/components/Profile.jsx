@@ -1,3 +1,5 @@
+const fetchProfile = async () => {
+  if (!user || !user.email) return;
 import { useState, useEffect } from "react";
 import { supabase } from "../services/supabaseClient";
 import { useAuth } from "../context/AuthContext";
@@ -205,31 +207,48 @@ export default function Profile() {
     fetchProfile();
   }, [user?.email]);
 
-  const handleSave = async () => {
+ const handleSave = async () => {
+    // 1. Validation check
+    if (!user?.id || !user?.email) {
+      setSaveStatus("error");
+      setSaveMessage("User session not found. Please re-login.");
+      return;
+    }
+
     const hours = parseInt(intervalHours);
     setSaveStatus("saving");
+    setSaveMessage("");
 
-    const { error } = await supabase
-      .from("kodo_members")
-      .upsert({
-        id: user.id,
-        email: user.email,
-        full_name: fullName.trim(),
-        phone_number: phoneNumber.trim(),
-        emergency_contact_name: ecName.trim(),
-        emergency_contact_email: ecEmail.trim(),
-        emergency_contact_phone: ecPhone.trim(),
-        emergency_contact_method: ecMethod,
-        check_in_interval_hours: hours,
-      }, { onConflict: 'email' });
+    try {
+      const { error } = await supabase
+        .from("kodo_members")
+        .upsert({
+          id: user.id, // This must be a valid UUID from Supabase Auth
+          email: user.email,
+          full_name: (fullName || "").trim(),
+          phone_number: (phoneNumber || "").trim(),
+          emergency_contact_name: (ecName || "").trim(),
+          emergency_contact_email: (ecEmail || "").trim(),
+          emergency_contact_phone: (ecPhone || "").trim(),
+          emergency_contact_method: ecMethod || "email",
+          check_in_interval_hours: hours || 24,
+        }, { onConflict: 'email' });
 
-    if (error) {
-      setSaveStatus("error");
-      setSaveMessage("Could not save profile.");
-    } else {
+      if (error) throw error;
+
       setSaveStatus("success");
-      setSaveMessage("Profile saved.");
-      setTimeout(() => setSaveStatus("idle"), 3000);
+      setSaveMessage("Profile saved successfully.");
+      
+    } catch (error) {
+      console.error("Full Save Error:", error);
+      setSaveStatus("error");
+      // This displays the actual error message from Supabase to help us debug
+      setSaveMessage(error.message || "Could not save profile.");
+    } finally {
+      // This ensures the button is clickable again after 3 seconds
+      setTimeout(() => {
+        setSaveStatus("idle");
+      }, 3000);
     }
   };
 
