@@ -108,29 +108,44 @@ export default function Profile() {
             <input style={s.input} type="number" value={intervalHours} onChange={(e) => setIntervalHours(e.target.value)} />
           </div>
 
-         <p style={s.sectionLabel}>Emergency Contact</p>
-<div style={s.fieldGroup}>
-  <input 
-    style={s.input} 
-    placeholder="Contact Name" 
-    value={ecName} 
-    onChange={(e) => setEcName(e.target.value)} 
-  />
-  <div style={s.methodRow}>
-    <button style={s.methodBtn(ecMethod === "email")} onClick={() => setEcMethod("email")}>Email</button>
-    <button style={s.methodBtn(ecMethod === "phone")} onClick={() => setEcMethod("phone")}>Phone</button>
-  </div>
-  {/* ONLY ONE INPUT HERE *}
-  <input
-    style={s.input}
-    placeholder={ecMethod === "email" ? "Email Address" : "Phone Number"}
-    value={ecMethod === "email" ? ecEmail : ecPhone}
-    onChange={(e) => {
-      if (ecMethod === "email") setEcEmail(e.target.value);
-      else setEcPhone(e.target.value);
-    }}
-  />
-</div>
+        <p style={s.sectionLabel}>Emergency Contact</p>
+          <div style={s.fieldGroup}>
+            <input 
+              style={s.input} 
+              placeholder="Name" 
+              value={ecName} 
+              onChange={(e) => setEcName(e.target.value)} 
+            />
+            
+            <div style={s.methodRow}>
+              <button 
+                style={s.methodBtn(ecMethod === "email")} 
+                onClick={() => setEcMethod("email")}
+              >
+                Email
+              </button>
+              <button 
+                style={s.methodBtn(ecMethod === "phone")} 
+                onClick={() => setEcMethod("phone")}
+              >
+                Phone
+              </button>
+            </div>
+
+            {/* ONLY ONE INPUT HERE - IT ADAPTS TO THE METHOD */}
+            <input
+              style={s.input}
+              placeholder={ecMethod === "email" ? "Email Address" : "Phone Number"}
+              value={ecMethod === "email" ? ecEmail : ecPhone}
+              onChange={(e) => {
+                if (ecMethod === "email") {
+                  setEcEmail(e.target.value);
+                } else {
+                  setEcPhone(e.target.value);
+                }
+              }}
+            />
+          </div>
 
           {saveStatus === "success" && <p style={s.successText}>{saveMessage}</p>}
           {saveStatus === "error" && <p style={s.errorText}>{saveMessage}</p>}
