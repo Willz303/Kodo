@@ -161,59 +161,66 @@ export default function Profile() {
   const [saveStatus, setSaveStatus] = useState("idle");
   const [saveMessage, setSaveMessage] = useState("");
 
-  // Personal fields
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
-
-  // Emergency contact fields
   const [ecName, setEcName] = useState("");
   const [ecEmail, setEcEmail] = useState("");
   const [ecPhone, setEcPhone] = useState("");
   const [ecMethod, setEcMethod] = useState("email");
   const [intervalHours, setIntervalHours] = useState(72);
 
-  // Password change fields
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordStatus, setPasswordStatus] = useState("idle");
   const [passwordMessage, setPasswordMessage] = useState("");
 
-  useEffect(() => {
+  const fetchProfile = async () => {
     if (!user) return;
+    setFetchStatus("loading");
 
-    const fetchProfile = async () => {
-      setFetchStatus("loading");
+    const { data, error } = await supabase
+      .from("kodo_members")
+      .select("full_name, phone_number, emergency_contact_name, emergency_contact_email, emergency_contact_phone, emergency_contact_method, check_in_interval_hours")
+      .eq("email", user.email)
+      .single();
 
-      const { data, error } = await supabase
-        .from("kodo_members")
-        .select("full_name, phone_number, emergency_contact_name, emergency_contact_email, emergency_contact_phone, emergency_contact_method, check_in_interval_hours")
-        .eq("email", user.email)
-        .single();
-
-      if (error || !data) {
-        if (error?.code === "PGRST116") {
-          await supabase.from("kodo_members").insert({
-            id: user.id,
-            email: user.email,
-          });
-          setFetchStatus("loaded");
-          return;
-        }
-        setFetchStatus("error");
+    if (error || !data) {
+      if (error?.code === "PGRST116") {
+        await supabase.from("kodo_members").insert({
+          id: user.id,
+          email: user.email,
+        });
+        setFetchStatus("loaded");
         return;
       }
+      setFetchStatus("error");
+      return;
+    }
 
-      setFullName(data.full_name || "");
-      setPhoneNumber(data.phone_number || "");
-      setEcName(data.emergency_contact_name || "");
-      setEcEmail(data.emergency_contact_email || "");
-      setEcPhone(data.emergency_contact_phone || "");
-      setEcMethod(data.emergency_contact_method || "email");
-      setIntervalHours(data.check_in_interval_hours || 72);
-      setFetchStatus("loaded");
-    };
+    setFullName(data.full_name || "");
+    setPhoneNumber(data.phone_number || "");
+    setEcName(data.emergency_contact_name || "");
+    setEcEmail(data.emergency_contact_email || "");
+    setEcPhone(data.emergency_contact_phone || "");
+    setEcMethod(data.emergency_contact_method || "email");
+    setIntervalHours(data.check_in_interval_hours || 72);
+    setFetchStatus("loaded");
+  };
 
+  // Fetch on mount
+  useEffect(() => {
     fetchProfile();
+  }, [user]);
+
+  // Refetch when tab becomes visible again
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && user) {
+        fetchProfile();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [user]);
 
   const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -313,7 +320,6 @@ export default function Profile() {
 
       {fetchStatus === "loaded" && (
         <>
-          {/* Personal details */}
           <div>
             <p style={s.sectionLabel}>Personal Details</p>
             <div style={s.fieldGroup}>
@@ -334,7 +340,6 @@ export default function Profile() {
 
           <hr style={s.divider} />
 
-          {/* Check-in interval */}
           <div>
             <p style={s.sectionLabel}>⏱ Check-in Interval</p>
             <div style={s.intervalRow}>
@@ -356,7 +361,6 @@ export default function Profile() {
 
           <hr style={s.divider} />
 
-          {/* Emergency contact */}
           <div>
             <p style={s.sectionLabel}>🚨 Emergency Contact</p>
             <div style={s.fieldGroup}>
@@ -410,7 +414,6 @@ export default function Profile() {
 
           <hr style={s.divider} />
 
-          {/* Change password */}
           <div>
             <p style={s.sectionLabel}>🔐 Change Password</p>
             <div style={s.fieldGroup}>
@@ -432,7 +435,7 @@ export default function Profile() {
             {passwordStatus === "error" && <p style={{ ...s.errorText, marginTop: "8px" }} role="alert">⚠ {passwordMessage}</p>}
 
             <button
-              style={{ ...s.saveButton(isChangingPassword), marginTop: "12px", backgroundColor: isChangingPassword ? colors.borderLight : colors.borderLight, color: isChangingPassword ? colors.textMuted : colors.textSecond, border: `1.5px solid ${colors.border}` }}
+              style={{ ...s.saveButton(isChangingPassword), marginTop: "12px", backgroundColor: colors.borderLight, color: colors.textSecond, border: `1.5px solid ${colors.border}` }}
               onClick={handleChangePassword}
               disabled={isChangingPassword}
             >

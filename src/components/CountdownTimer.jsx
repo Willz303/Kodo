@@ -66,7 +66,7 @@ const s = {
   errorText: { color: colors.danger, fontSize: "0.85rem", margin: 0 },
 };
 
-function getTimercolor(pct) {
+function getTimerColor(pct) {
   if (pct <= 0) return colors.timerDanger;
   if (pct < 20) return colors.timerWarn;
   return colors.timerSafe;
@@ -89,28 +89,40 @@ export default function CountdownTimer({ lastCheckInOverride }) {
   const [timeRemaining, setTimeRemaining] = useState(null);
   const intervalRef = useRef(null);
 
-  useEffect(() => {
+  const fetchData = async () => {
     if (!user) return;
+    setFetchStatus("loading");
 
-    const fetch = async () => {
-      setFetchStatus("loading");
+    const { data, error } = await supabase
+      .from("kodo_members")
+      .select("last_check_in, check_in_interval_hours")
+      .eq("email", user.email)
+      .single();
 
-      const { data, error } = await supabase
-        .from("kodo_members")
-        .select("last_check_in, check_in_interval_hours")
-        .eq("email", user.email)
-        .single();
+    if (error || !data) { setFetchStatus("error"); return; }
 
-      if (error || !data) { setFetchStatus("error"); return; }
+    setLastCheckIn(data.last_check_in);
+    setIntervalHours(data.check_in_interval_hours || 72);
+    setFetchStatus("loaded");
+  };
 
-      setLastCheckIn(data.last_check_in);
-      setIntervalHours(data.check_in_interval_hours || 72);
-      setFetchStatus("loaded");
-    };
-
-    fetch();
+  // Fetch on mount
+  useEffect(() => {
+    fetchData();
   }, [user]);
 
+  // Refetch when tab becomes visible again
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && user) {
+        fetchData();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [user]);
+
+  // If parent passes a fresh check-in timestamp after button press
   useEffect(() => {
     if (lastCheckInOverride) {
       setLastCheckIn(lastCheckInOverride);
@@ -118,6 +130,7 @@ export default function CountdownTimer({ lastCheckInOverride }) {
     }
   }, [lastCheckInOverride]);
 
+  // Tick every second
   useEffect(() => {
     if (fetchStatus !== "loaded" || !lastCheckIn) return;
 
@@ -136,7 +149,7 @@ export default function CountdownTimer({ lastCheckInOverride }) {
   const windowMs = intervalHours * 60 * 60 * 1000;
   const isExpired = timeRemaining !== null && timeRemaining <= 0;
   const pct = timeRemaining > 0 ? Math.min(100, (timeRemaining / windowMs) * 100) : 0;
-  const timercolor = getTimercolor(pct);
+  const timerColor = getTimerColor(pct);
   const formatted = timeRemaining !== null ? formatTime(timeRemaining) : null;
 
   return (
@@ -154,18 +167,24 @@ export default function CountdownTimer({ lastCheckInOverride }) {
           {isExpired ? (
             <>
               <p style={s.timerDisplay(colors.timerDanger)}>TIME EXPIRED</p>
-              <p style={s.subtext(colors.timerDanger)}>⚠ Your emergency contact has been notified.</p>
+              <p style={s.subtext(colors.timerDanger)}>
+                ⚠ Your emergency contact has been notified.
+              </p>
             </>
           ) : (
             <>
-              <p style={s.timerDisplay(timercolor)}>
+              <p style={s.timerDisplay(timerColor)}>
                 {formatted ?? "Calculating…"}
               </p>
-              <p style={s.subtext(colors.textSecond)}>remaining before alert is triggered</p>
+              <p style={s.subtext(colors.textSecond)}>
+                remaining before alert is triggered
+              </p>
               <div style={s.progressBarTrack}>
-                <div style={s.progressBarFill(pct, timercolor)} />
+                <div style={s.progressBarFill(pct, timerColor)} />
               </div>
-              <p style={s.intervalNote}>window set to {intervalHours}h — change in profile</p>
+              <p style={s.intervalNote}>
+                window set to {intervalHours}h — change in profile
+              </p>
             </>
           )}
         </>
