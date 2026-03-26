@@ -54,27 +54,40 @@ export default function CheckInButton({ onCheckIn }) {
   const [status, setStatus] = useState("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
-  const handleCheckIn = async () => {
-    if (status === "loading" || status === "success") return;
+ const handleCheckIn = async () => {
+    // Prevent double-clicks
+    if (status === "loading") return;
+    
     setStatus("loading");
     setErrorMsg("");
 
-    const now = new Date().toISOString();
+    try {
+      const now = new Date().toISOString();
 
-    const { error } = await supabase
-      .from("kodo_members")
-      .update({ last_check_in: now })
-      .eq("email", user.email);
+      const { error } = await supabase
+        .from("kodo_members")
+        .update({ last_check_in: now })
+        .eq("email", user.email);
 
-    if (error) {
+      if (error) throw error; // Jump to the catch block
+
+      setStatus("success");
+      if (onCheckIn) onCheckIn(now);
+      
+      // Return to idle after 3 seconds
+      setTimeout(() => setStatus("idle"), 3000);
+
+    } catch (error) {
+      console.error("Check-in Error:", error);
       setStatus("error");
-      setErrorMsg("Failed to update check-in. Please try again.");
-      return;
+      setErrorMsg(error.message || "Failed to update check-in.");
+      
+      // Crucial: allow them to try again after an error
+      setTimeout(() => setStatus("idle"), 4000); 
+    } finally {
+      // This is the safety net. If you want the 'Loading' 
+      // state to definitely end, you'd put logic here.
     }
-
-    setStatus("success");
-    if (onCheckIn) onCheckIn(now);
-    setTimeout(() => setStatus("idle"), 3000);
   };
 
   return (

@@ -110,12 +110,18 @@ export default function Profile() {
 
           <p style={s.sectionLabel}>Emergency Contact</p>
           <div style={s.fieldGroup}>
-            <input style={s.input} placeholder="Name" value={ecName} onChange={(e) => setEcName(e.target.value)} />
-            <div style={s.methodRow}>
-              <button style={s.methodBtn(ecMethod === "email")} onClick={() => setEcMethod("email")}>Email</button>
-              <button style={s.methodBtn(ecMethod === "phone")} onClick={() => setEcMethod("phone")}>Phone</button>
-            </div>
-            <input style={s.input} placeholder={ecMethod === "email" ? "Email" : "Phone"} value={ecMethod === "email" ? ecEmail : ecPhone} onChange={(e) => ecMethod === "email" ? setEcEmail(e.target.value) : setEcPhone(e.target.value)} />
+            <input 
+  style={s.input} 
+  placeholder={ecMethod === "email" ? "Email" : "Phone"} 
+  value={ecMethod === "email" ? ecEmail : ecPhone} 
+  onChange={(e) => {
+    if (ecMethod === "email") {
+      setEcEmail(e.target.value);
+    } else {
+      setEcPhone(e.target.value);
+    }
+  }} 
+/>
           </div>
 
           {saveStatus === "success" && <p style={s.successText}>{saveMessage}</p>}

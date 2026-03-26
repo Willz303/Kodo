@@ -15,11 +15,10 @@ export function AuthProvider({ children }) {
     });
 
     // 2. Listen for changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-        setAuthLoading(false);
+   const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+  setUser(session?.user ?? null);
+  setAuthLoading(false); // 
+});
 
         // Auto-create row in kodo_members using upsert to prevent loops/406 errors
         if (event === "SIGNED_IN" && currentUser) {
