@@ -24,6 +24,7 @@ function Dashboard() {
       padding: "40px 20px 80px",
       boxSizing: "border-box",
       transition: "background-color 0.3s ease, color 0.3s ease",
+      overflowY: "auto", // Ensure scrolling is enabled
     },
     topBar: {
       display: "flex",
@@ -60,7 +61,6 @@ function Dashboard() {
       fontSize: "0.78rem",
       fontWeight: "600",
       cursor: "pointer",
-      transition: "all 0.2s",
     },
     signOutBtn: {
       padding: "6px 14px",
@@ -106,9 +106,17 @@ function Dashboard() {
     },
   };
 
-  if (authLoading) return <div style={s.loading}>Loading Kodo…</div>;
-  if (!user) return <Auth colors={colors} toggleDark={() => setDark(!dark)} dark={dark} />;
+  // 1. Guard Clause: If still checking session
+  if (authLoading) {
+    return <div style={s.loading}>Loading Kodo…</div>;
+  }
 
+  // 2. Guard Clause: If not logged in
+  if (!user) {
+    return <Auth colors={colors} toggleDark={() => setDark(!dark)} dark={dark} />;
+  }
+
+  // 3. Main Dashboard
   return (
     <div style={s.page}>
       <div style={s.topBar}>
@@ -127,17 +135,17 @@ function Dashboard() {
       <main style={s.main}>
         <section style={{ textAlign: "center", width: "100%" }}>
           <p style={s.sectionLabel}>Your check-in</p>
-          <CheckInButton onCheckIn={(ts) => setLastCheckIn(ts)} colors={colors} />
+          <CheckInButton onCheckIn={(ts) => setLastCheckIn(ts)} />
         </section>
 
         <section style={{ width: "100%" }}>
           <p style={s.sectionLabel}>Time remaining</p>
-          <CountdownTimer lastCheckInOverride={lastCheckIn} colors={colors} />
+          <CountdownTimer lastCheckInOverride={lastCheckIn} />
         </section>
 
         <section style={{ width: "100%" }}>
           <p style={s.sectionLabel}>Settings</p>
-          <Profile colors={colors} />
+          <Profile />
         </section>
       </main>
 

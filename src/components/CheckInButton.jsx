@@ -1,107 +1,60 @@
 import { useState } from "react";
 import { supabase } from "../services/supabaseClient";
 import { useAuth } from "../context/AuthContext";
-import { getColors } from "../theme";
-
-const colors = getColors(false);
-
-const s = {
-  wrapper: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: "14px",
-  },
-  button: (status) => ({
-    width: "220px",
-    height: "220px",
-    borderRadius: "50%",
-    border: "none",
-    cursor: status === "loading" || status === "success" ? "not-allowed" : "pointer",
-    fontSize: "1.4rem",
-    fontWeight: "700",
-    color: "#ffffff",
-    letterSpacing: "0.5px",
-    boxShadow: status === "success"
-      ? `0 0 0 10px ${colors.successGlow}`
-      : `0 0 0 10px ${colors.primaryGlow}`,
-    backgroundColor: status === "success"
-      ? colors.success
-      : status === "loading"
-      ? colors.borderLight
-      : colors.primary,
-    transition: "background-color 0.4s ease, box-shadow 0.4s ease, transform 0.1s ease",
-    transform: status === "loading" ? "scale(0.97)" : "scale(1)",
-    outline: "none",
-  }),
-  subtitle: {
-    color: colors.textSecond,
-    fontSize: "0.8rem",
-    textAlign: "center",
-    margin: 0,
-  },
-  errorText: {
-    color: colors.danger,
-    fontSize: "0.85rem",
-    maxWidth: "260px",
-    textAlign: "center",
-    margin: 0,
-  },
-};
 
 export default function CheckInButton({ onCheckIn }) {
   const { user } = useAuth();
   const [status, setStatus] = useState("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
- const handleCheckIn = async () => {
-    // Prevent double-clicks
-    if (status === "loading") return;
+  const handleCheckIn = async () => {
+    if (status === "loading" || !user) return;
     
     setStatus("loading");
     setErrorMsg("");
 
     try {
       const now = new Date().toISOString();
-
       const { error } = await supabase
         .from("kodo_members")
         .update({ last_check_in: now })
         .eq("email", user.email);
 
-      if (error) throw error; // Jump to the catch block
+      if (error) throw error;
 
       setStatus("success");
       if (onCheckIn) onCheckIn(now);
       
-      // Return to idle after 3 seconds
       setTimeout(() => setStatus("idle"), 3000);
-
     } catch (error) {
       console.error("Check-in Error:", error);
       setStatus("error");
       setErrorMsg(error.message || "Failed to update check-in.");
-      
-      // Crucial: allow them to try again after an error
-      setTimeout(() => setStatus("idle"), 4000); 
-    } finally {
-      // This is the safety net. If you want the 'Loading' 
-      // state to definitely end, you'd put logic here.
+      setTimeout(() => setStatus("idle"), 4000);
     }
   };
 
   return (
-    <div style={s.wrapper}>
-      <button
-        style={s.button(status)}
+    <div style={{ textAlign: "center", width: "100%" }}>
+      <button 
         onClick={handleCheckIn}
-        disabled={status === "loading" || status === "success"}
-        aria-label="Check in to confirm you are safe"
+        disabled={status === "loading"}
+        style={{
+          width: "100%",
+          padding: "16px",
+          borderRadius: "12px",
+          border: "none",
+          backgroundColor: status === "success" ? "#3A8A4A" : "#1a1a1a",
+          color: "white",
+          fontWeight: "700",
+          fontSize: "1.1rem",
+          cursor: status === "loading" ? "not-allowed" : "pointer",
+          transition: "all 0.2s ease"
+        }}
       >
-        {status === "loading" ? "Updating…" : status === "success" ? "✓ Safe" : "I'm Safe"}
+        {status === "loading" ? "Updating..." : status === "success" ? "✓ I'm Safe" : "I'm Safe"}
       </button>
-      <p style={s.subtitle}>Tap to confirm you're safe.</p>
-      {status === "error" && <p style={s.errorText} role="alert">⚠ {errorMsg}</p>}
+      {errorMsg && <p style={{ color: "#ff4d4d", fontSize: "0.8rem", marginTop: "8px" }}>{errorMsg}</p>}
     </div>
   );
 }

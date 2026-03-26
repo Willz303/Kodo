@@ -14,19 +14,23 @@ export function AuthProvider({ children }) {
       setAuthLoading(false);
     });
 
-    // 2. Listen for changes
-   const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-  setUser(session?.user ?? null);
-  setAuthLoading(false); // 
-});
+  // 2. Listen for changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        setAuthLoading(false); // This ensures the app always stops "Loading"
 
-        // Auto-create row in kodo_members using upsert to prevent loops/406 errors
         if (event === "SIGNED_IN" && currentUser) {
-  await supabase.from("kodo_members").upsert({
-    email: currentUser.email,
-    // Remove the id: currentUser.id line temporarily to test
-  }, { on_conflict: 'email' });
-}
+          try {
+            await supabase.from("kodo_members").upsert({
+              id: currentUser.id,
+              email: currentUser.email,
+            }, { onConflict: 'email' });
+          } catch (err) {
+            console.error("Auth sync error:", err);
+          }
+        }
 
         if (event === "SIGNED_OUT") {
           setUser(null);
