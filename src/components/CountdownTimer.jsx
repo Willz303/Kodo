@@ -111,16 +111,6 @@ export default function CountdownTimer({ lastCheckInOverride }) {
     fetchData();
   }, [user]);
 
-  // Refetch when tab becomes visible again
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible" && user) {
-        fetchData();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [user]);
 
   // If parent passes a fresh check-in timestamp after button press
   useEffect(() => {
